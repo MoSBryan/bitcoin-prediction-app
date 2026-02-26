@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bitcoin Floor & Trading Range</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">Market Intelligence</p>
+        <h1>Bitcoin Floor & Trading Range</h1>
+        <p class="subtitle">
+          See current BTC support (floor), likely trading ranges, and core indicators.
+        </p>
+      </header>
+
+      <section class="controls">
+        <label>
+          Lookback (days)
+          <input id="lookback" type="number" min="30" max="365" step="1" value="90" />
+        </label>
+        <label>
+          Forecast horizon (days)
+          <input id="horizon" type="number" min="1" max="30" step="1" value="7" />
+        </label>
+        <button id="refreshBtn">Refresh</button>
+      </section>
+
+      <section id="status" class="status">Loading latest bitcoin market data...</section>
+
+      <section class="metrics-grid">
+        <article class="metric">
+          <h2>Spot Price</h2>
+          <p id="spotPrice" class="value">-</p>
+        </article>
+        <article class="metric">
+          <h2>Estimated Floor</h2>
+          <p id="floorPrice" class="value">-</p>
+          <p id="floorNote" class="note">-</p>
+        </article>
+        <article class="metric">
+          <h2>68% Trading Range</h2>
+          <p id="range68Price" class="value">-</p>
+          <p id="range68Note" class="note">-</p>
+        </article>
+        <article class="metric">
+          <h2>95% Trading Range</h2>
+          <p id="range95Price" class="value">-</p>
+          <p id="range95Note" class="note">-</p>
+        </article>
+        <article class="metric">
+          <h2>Volatility (daily)</h2>
+          <p id="volatility" class="value">-</p>
+        </article>
+        <article class="metric">
+          <h2>RSI (14)</h2>
+          <p id="rsi" class="value">-</p>
+          <p id="rsiNote" class="note">-</p>
+        </article>
+        <article class="metric">
+          <h2>ATR (14)</h2>
+          <p id="atr" class="value">-</p>
+          <p class="note">Average true range (daily move)</p>
+        </article>
+        <article class="metric">
+          <h2>Bollinger (20)</h2>
+          <p id="bollinger" class="value">-</p>
+          <p class="note">Lower / Upper band</p>
+        </article>
+      </section>
+
+      <section class="chart-card">
+        <h2>Price History + Floor + 68/95% Bands</h2>
+        <canvas id="priceChart"></canvas>
+      </section>
+
+      <section class="history-card">
+        <h2>Saved Prediction History</h2>
+        <p class="note">Newest at the top. Stored locally in <code>predictions.db</code>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Spot</th>
+                <th>Floor</th>
+                <th>68% Low</th>
+                <th>68% High</th>
+                <th>95% Low</th>
+                <th>95% High</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="7">No saved predictions yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="disclaimer">
+        <strong>Note:</strong> This is a statistical estimate, not financial advice. Crypto markets can invalidate modeled floors quickly.
+      </section>
+    </main>
+  </body>
+</html>
