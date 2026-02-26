@@ -20,9 +20,10 @@ const historyBodyEl = document.getElementById('historyBody');
 
 let chart;
 
-// --- Y-axis lock so it doesn't keep rescaling downward on refresh
-let yAxisLock = null;
+// --- Bulletproof y-axis lock (persists per lookback+horizon)
 let lastParamsKey = null;
+let yAxisLock = null;
+const yAxisLockByKey = {}; // { "90-7": {min,max}, ... }
 
 function formatUSD(value) {
   if (value == null || Number.isNaN(value)) return '-';
@@ -74,6 +75,30 @@ function renderHistory(rows) {
     .join('');
 }
 
+function computeYAxisLock(points, model) {
+  const closes = points.map((p) => p.close);
+
+  const floorBand = points.map(() => model.floor);
+  const range68LowBand = points.map(() => model.range68.low);
+  const range68HighBand = points.map(() => model.range68.high);
+  const range95LowBand = points.map(() => model.range95.low);
+  const range95HighBand = points.map(() => model.range95.high);
+
+  const all = []
+    .concat(closes, floorBand, range68LowBand, range68HighBand, range95LowBand, range95HighBand)
+    .filter((v) => typeof v === 'number' && Number.isFinite(v));
+
+  if (!all.length) return null;
+
+  const min = Math.min(...all);
+  const max = Math.max(...all);
+
+  // If min/max are weirdly equal (flat series), add a bit of padding.
+  const pad = (max - min) * 0.10 || Math.max(1, max * 0.02);
+
+  return { min: min - pad, max: max + pad };
+}
+
 function renderChart(points, model) {
   const labels = points.map((p) =>
     new Date(p.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -86,16 +111,10 @@ function renderChart(points, model) {
   const range95LowBand = points.map(() => model.range95.low);
   const range95HighBand = points.map(() => model.range95.high);
 
-  // --- Lock y-axis range (compute once per lookback/horizon; reuse on refresh)
-  const all = []
-    .concat(closes, floorBand, range68LowBand, range68HighBand, range95LowBand, range95HighBand)
-    .filter((v) => typeof v === 'number' && Number.isFinite(v));
-
-  if (!yAxisLock && all.length) {
-    const min = Math.min(...all);
-    const max = Math.max(...all);
-    const pad = (max - min) * 0.10 || max * 0.02; // 10% pad, fallback 2%
-    yAxisLock = { min: min - pad, max: max + pad };
+  // Ensure we have a lock (should already be set in loadAndRender, but safe fallback)
+  if (!yAxisLock) {
+    yAxisLock = computeYAxisLock(points, model);
+    if (yAxisLock && lastParamsKey) yAxisLockByKey[lastParamsKey] = yAxisLock;
   }
 
   if (chart) chart.destroy();
@@ -120,14 +139,26 @@ function renderChart(points, model) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { labels: { color: '#d5e5ff' } },
-        tooltip: { callbacks: { label(context) { return `${context.dataset.label}: ${formatUSD(context.parsed.y)}`; } } },
+        tooltip: {
+          callbacks: {
+            label(context) {
+              return `${context.dataset.label}: ${formatUSD(context.parsed.y)}`;
+            },
+          },
+        },
       },
       scales: {
         x: { ticks: { color: '#9eb6dc', maxTicksLimit: 8 }, grid: { color: 'rgba(165, 185, 220, 0.1)' } },
         y: {
+          // If lock exists, force stable min/max. Otherwise let chart autoscale.
           min: yAxisLock ? yAxisLock.min : undefined,
           max: yAxisLock ? yAxisLock.max : undefined,
-          ticks: { color: '#9eb6dc', callback(value) { return formatUSD(value); } },
+          ticks: {
+            color: '#9eb6dc',
+            callback(value) {
+              return formatUSD(value);
+            },
+          },
           grid: { color: 'rgba(165, 185, 220, 0.1)' },
         },
       },
@@ -157,15 +188,21 @@ async function loadAndRender() {
     const lookback = Number(lookbackInput.value);
     const horizon = Number(horizonInput.value);
 
-    // Reset y-axis lock only when inputs change
+    // --- Only change lock when inputs change (bulletproof)
     const paramsKey = `${lookback}-${horizon}`;
     if (paramsKey !== lastParamsKey) {
-      yAxisLock = null;
       lastParamsKey = paramsKey;
+      yAxisLock = yAxisLockByKey[paramsKey] || null;
     }
 
     const analysis = await fetchAnalyze(lookback, horizon);
     const model = analysis.model;
+
+    // If we don't already have a lock for this paramsKey, compute it once and store it.
+    if (!yAxisLock) {
+      yAxisLock = computeYAxisLock(analysis.series, model);
+      if (yAxisLock) yAxisLockByKey[paramsKey] = yAxisLock;
+    }
 
     spotPriceEl.textContent = formatUSD(model.spot);
     floorPriceEl.textContent = formatUSD(model.floor);
