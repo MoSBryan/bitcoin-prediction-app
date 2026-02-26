@@ -13,20 +13,19 @@ HOST = "0.0.0.0"
 PORT = 8080
 DB_FILE = Path("predictions.db")
 
-
 def fetch_ohlc(days: int):
     url = (
-    "https://api.binance.com/api/v3/klines"
-    f"?symbol=BTCUSDT&interval=1d&limit={days}"
-    )    
+        "https://api.binance.com/api/v3/klines"
+        f"?symbol=BTCUSDT&interval=1d&limit={days}"
+    )
     req = urllib.request.Request(url, headers={"User-Agent": "btc-floor-app/1.0"})
     with urllib.request.urlopen(req, timeout=20) as res:
         data = json.loads(res.read().decode("utf-8"))
         if isinstance(data, dict) and "code" in data:
-           raise ValueError(f"Binance API error: {data.get('msg')}")
+            raise ValueError(f"Binance API error: {data.get('msg')}")
+
     points = []
     for row in data:
-        # row: [timestamp, open, high, low, close]
         points.append(
             {
                 "ts": int(row[0]),
@@ -38,6 +37,20 @@ def fetch_ohlc(days: int):
         )
     return points
 
+
+def clean_ohlc(points):
+    cleaned = []
+    last_ts = None
+    for p in points:
+        if p["open"] <= 0 or p["high"] <= 0 or p["low"] <= 0 or p["close"] <= 0:
+            continue
+        if not (p["low"] <= p["open"] <= p["high"] and p["low"] <= p["close"] <= p["high"]):
+            continue
+        if last_ts is not None and p["ts"] <= last_ts:
+            continue
+        last_ts = p["ts"]
+        cleaned.append(p)
+    return cleaned
 
 def percentile(sorted_vals, p: float):
     if not sorted_vals:
@@ -256,7 +269,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             selected_days = lookback_days
 
             try:
-                points = fetch_ohlc(selected_days)
+                points = clean_ohlc(fetch_ohlc(selected_days))
                 if len(points) < 25:
                     raise ValueError("Not enough data from provider.")
                 model = compute_model(points, horizon_days)
