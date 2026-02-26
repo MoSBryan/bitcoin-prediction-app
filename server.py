@@ -16,9 +16,9 @@ DB_FILE = Path("predictions.db")
 
 def fetch_ohlc(days: int):
     url = (
-        "https://api.coingecko.com/api/v3/coins/bitcoin/ohlc"
-        f"?vs_currency=usd&days={days}"
-    )
+    "https://api.binance.com/api/v3/klines"
+    f"?symbol=BTCUSDT&interval=1d&limit={days}"
+    )    
     req = urllib.request.Request(url, headers={"User-Agent": "btc-floor-app/1.0"})
     with urllib.request.urlopen(req, timeout=20) as res:
         data = json.loads(res.read().decode("utf-8"))
@@ -251,8 +251,7 @@ class AppHandler(SimpleHTTPRequestHandler):
             lookback_days = max(30, min(365, lookback_days))
             horizon_days = max(1, min(30, horizon_days))
 
-            allowed_ohlc_days = [1, 7, 14, 30, 90, 180, 365]
-            selected_days = min(allowed_ohlc_days, key=lambda d: abs(d - lookback_days))
+            selected_days = lookback_days
 
             try:
                 points = fetch_ohlc(selected_days)
