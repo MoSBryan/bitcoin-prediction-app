@@ -106,54 +106,12 @@ function renderChart(points, model) {
     data: {
       labels,
       datasets: [
-        {
-          label: 'BTC Close',
-          data: closes,
-          borderColor: '#f4b942',
-          pointRadius: 0,
-          borderWidth: 2,
-          tension: 0.2,
-        },
-        {
-          label: 'Estimated Floor',
-          data: floorBand,
-          borderColor: '#36c28f',
-          borderDash: [7, 5],
-          pointRadius: 0,
-          borderWidth: 1.4,
-        },
-        {
-          label: '68% Low',
-          data: range68LowBand,
-          borderColor: '#7ca8f0',
-          borderDash: [4, 4],
-          pointRadius: 0,
-          borderWidth: 1,
-        },
-        {
-          label: '68% High',
-          data: range68HighBand,
-          borderColor: '#5dd1f3',
-          borderDash: [4, 4],
-          pointRadius: 0,
-          borderWidth: 1,
-        },
-        {
-          label: '95% Low',
-          data: range95LowBand,
-          borderColor: '#c0a3ff',
-          borderDash: [3, 5],
-          pointRadius: 0,
-          borderWidth: 1,
-        },
-        {
-          label: '95% High',
-          data: range95HighBand,
-          borderColor: '#f08b6f',
-          borderDash: [3, 5],
-          pointRadius: 0,
-          borderWidth: 1,
-        },
+        { label: 'BTC Close', data: closes, borderColor: '#f4b942', pointRadius: 0, borderWidth: 2, tension: 0.2 },
+        { label: 'Estimated Floor', data: floorBand, borderColor: '#36c28f', borderDash: [7, 5], pointRadius: 0, borderWidth: 1.4 },
+        { label: '68% Low', data: range68LowBand, borderColor: '#7ca8f0', borderDash: [4, 4], pointRadius: 0, borderWidth: 1 },
+        { label: '68% High', data: range68HighBand, borderColor: '#5dd1f3', borderDash: [4, 4], pointRadius: 0, borderWidth: 1 },
+        { label: '95% Low', data: range95LowBand, borderColor: '#c0a3ff', borderDash: [3, 5], pointRadius: 0, borderWidth: 1 },
+        { label: '95% High', data: range95HighBand, borderColor: '#f08b6f', borderDash: [3, 5], pointRadius: 0, borderWidth: 1 },
       ],
     },
     options: {
@@ -161,32 +119,15 @@ function renderChart(points, model) {
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          labels: { color: '#d5e5ff' },
-        },
-        tooltip: {
-          callbacks: {
-            label(context) {
-              return `${context.dataset.label}: ${formatUSD(context.parsed.y)}`;
-            },
-          },
-        },
+        legend: { labels: { color: '#d5e5ff' } },
+        tooltip: { callbacks: { label(context) { return `${context.dataset.label}: ${formatUSD(context.parsed.y)}`; } } },
       },
       scales: {
-        x: {
-          ticks: { color: '#9eb6dc', maxTicksLimit: 8 },
-          grid: { color: 'rgba(165, 185, 220, 0.1)' },
-        },
+        x: { ticks: { color: '#9eb6dc', maxTicksLimit: 8 }, grid: { color: 'rgba(165, 185, 220, 0.1)' } },
         y: {
-          // --- Apply lock so axis doesn’t keep drifting
           min: yAxisLock ? yAxisLock.min : undefined,
           max: yAxisLock ? yAxisLock.max : undefined,
-          ticks: {
-            color: '#9eb6dc',
-            callback(value) {
-              return formatUSD(value);
-            },
-          },
+          ticks: { color: '#9eb6dc', callback(value) { return formatUSD(value); } },
           grid: { color: 'rgba(165, 185, 220, 0.1)' },
         },
       },
@@ -197,18 +138,14 @@ function renderChart(points, model) {
 async function fetchAnalyze(lookback, horizon) {
   const res = await fetch(`/api/analyze?lookback=${lookback}&horizon=${horizon}`);
   const payload = await res.json();
-  if (!res.ok) {
-    throw new Error(payload.error || `Request failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(payload.error || `Request failed (${res.status})`);
   return payload;
 }
 
 async function fetchHistory() {
   const res = await fetch('/api/history?limit=12');
   const payload = await res.json();
-  if (!res.ok) {
-    throw new Error(payload.error || `History failed (${res.status})`);
-  }
+  if (!res.ok) throw new Error(payload.error || `History failed (${res.status})`);
   return payload.rows;
 }
 
