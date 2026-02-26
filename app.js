@@ -20,6 +20,10 @@ const historyBodyEl = document.getElementById('historyBody');
 
 let chart;
 
+// --- Y-axis lock so it doesn't keep rescaling downward on refresh
+let yAxisLock = null;
+let lastParamsKey = null;
+
 function formatUSD(value) {
   if (value == null || Number.isNaN(value)) return '-';
   return new Intl.NumberFormat('en-US', {
@@ -81,6 +85,18 @@ function renderChart(points, model) {
   const range68HighBand = points.map(() => model.range68.high);
   const range95LowBand = points.map(() => model.range95.low);
   const range95HighBand = points.map(() => model.range95.high);
+
+  // --- Lock y-axis range (compute once per lookback/horizon; reuse on refresh)
+  const all = []
+    .concat(closes, floorBand, range68LowBand, range68HighBand, range95LowBand, range95HighBand)
+    .filter((v) => typeof v === 'number' && Number.isFinite(v));
+
+  if (!yAxisLock && all.length) {
+    const min = Math.min(...all);
+    const max = Math.max(...all);
+    const pad = (max - min) * 0.10 || max * 0.02; // 10% pad, fallback 2%
+    yAxisLock = { min: min - pad, max: max + pad };
+  }
 
   if (chart) chart.destroy();
 
@@ -162,6 +178,9 @@ function renderChart(points, model) {
           grid: { color: 'rgba(165, 185, 220, 0.1)' },
         },
         y: {
+          // --- Apply lock so axis doesn’t keep drifting
+          min: yAxisLock ? yAxisLock.min : undefined,
+          max: yAxisLock ? yAxisLock.max : undefined,
           ticks: {
             color: '#9eb6dc',
             callback(value) {
@@ -200,6 +219,13 @@ async function loadAndRender() {
 
     const lookback = Number(lookbackInput.value);
     const horizon = Number(horizonInput.value);
+
+    // Reset y-axis lock only when inputs change
+    const paramsKey = `${lookback}-${horizon}`;
+    if (paramsKey !== lastParamsKey) {
+      yAxisLock = null;
+      lastParamsKey = paramsKey;
+    }
 
     const analysis = await fetchAnalyze(lookback, horizon);
     const model = analysis.model;
