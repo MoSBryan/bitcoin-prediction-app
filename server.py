@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-HOST = "127.0.0.1"
+HOST = "0.0.0.0"
 PORT = 8080
 DB_FILE = Path("predictions.db")
 
