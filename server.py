@@ -22,6 +22,8 @@ def fetch_ohlc(days: int):
     req = urllib.request.Request(url, headers={"User-Agent": "btc-floor-app/1.0"})
     with urllib.request.urlopen(req, timeout=20) as res:
         data = json.loads(res.read().decode("utf-8"))
+        if isinstance(data, dict) and "code" in data:
+           raise ValueError(f"Binance API error: {data.get('msg')}")
     points = []
     for row in data:
         # row: [timestamp, open, high, low, close]
